@@ -6,4 +6,7 @@ class RCB(object):
 
 class Resources(object):
     def __init__(self):
-        pass
+        self.rcbs = []
+        # To-Do: support import config file
+        for i in range(1, 5):
+            self.rcbs.append(RCB(i, i))
