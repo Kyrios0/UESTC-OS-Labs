@@ -6,7 +6,7 @@ class PCB(object):
         self.name = pname
         self.status = 'ready' # ready / running / block
         self.priority = prior # 0: init, 1: user, 2: system
-        self.resources = {}
+        self.resources = {} # rid: amount
         self.parent = parent
         self.children = []
     
@@ -15,6 +15,9 @@ class PCB(object):
 
     def del_child(self, pid):
         self.children.remove(pid)
+    
+    def get_resources(self):
+        return self.resources.items()
 
 class Process(object):
     def __init__(self, pcb):
@@ -26,11 +29,8 @@ class Process(object):
     def del_child(self, pid):
         self.pcb.del_child(pid)
 
-    def request(self, rid, n=1):
-        pass
-
-    def release(self, rid, n=1):
-        pass
+    def get_resources(self):
+        return self.pcb.get_resources()
 
     def __del__(self):
         del self.pcb
