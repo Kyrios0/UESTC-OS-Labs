@@ -13,29 +13,69 @@ class TestShell(object):
 
         self.create_process(pname='init', prior=0, parent=None)
 
+        self.running_process = 0
+
     def create_process(self, pname, prior, parent):
-        pcb = PCB(self.next_pid, pname, prior, parent)
+        pcb = PCB(self.next_pid, pname, prior, parent, self.ready_list[prior])
         self.ready_list[prior].append(pcb)
         self.process_list.append(Process(pcb))
         if parent != None:
             self.process_list[parent].add_child(self.next_pid)
-        self.next_pid += 1   
+        self.next_pid += 1
+
+        self.scheduler()
 
     def delete_process(self, pid):
         process = self.process_list[pid]
-        for child in self.process.pcb.children:
+
+        for child in process.get_children():
             self.delete_process(child)
         # release all resources
         for rid, amount in process.get_resources():
             self.release(pid, rid, amount)
-        # **To-Do**: unlink
+        process.get_queue().remove(process.get_pcb()) # pcb.queue.remove(pcb)
         del process
 
+        self.scheduler()
+
     def request(self, pid, rid, n=1):
-        pass
+        rcb = self.resources.get_rcb(rid)
+        process = self.process_list[pid]
+        
+        if rcb.status >= n:
+            rcb.status -= n
+            process.add_resource(rid, n)
+        else:
+            # To-Do: exception
+            process.set_state('blocked')
+            process.get_queue().remove(process.get_pcb()) # pcb.queue.remove(pcb)
+            process.set_queue(rcb.waiting_list) # pcb.queue = rcb.waiting_list
+            rcb.join_waiting(pid, n) # rcb.waiting_list.append(pcb)
+
+            self.scheduler()
 
     def release(self, pid, rid, n=1):
-        pass
+        rcb = self.resources.get_rcb(rid)
+        process = self.process_list[pid]
+        pcb = process.pcb
+
+        process.sub_resource(rid, n)
+        rcb.status += n
+
+        if len(rcb.waiting_list) > 0:
+            if rcb.waiting_list.values()[0] <= rcb.status:
+                # pop waiting_list[0]
+                bpid, bn = list(rcb.waiting_list.items())[0]
+                del rcb.waiting_list[bpid]
+
+                bprocess = self.process_list[bpid]
+                bprocess.set_state('ready')
+                bprocess.set_queue(self.ready_list[bprocess.get_prior()])
+                self.ready_list[bprocess.get_prior()].append(bprocess.get_pcb())
+                bprocess.add_resource(rid, bn)
+        self.scheduler()
+
+
 
     def list_ready(self):
         for prior, pri_ready_list in enumerate(self.ready_list):
