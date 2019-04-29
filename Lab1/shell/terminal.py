@@ -1,56 +1,75 @@
 from .process import Process, PCB
 from .resource import Resources
 import logging
+from .command import command_list, Completer
+import readline
+
 
 class TestShell(object):
     def __init__(self):
         self.resources = Resources()
-
-        self.ready_list = [[] for _ in range(3)] # store pcb
-        self.process_list = [] # store process
+        self.ready_list = [[] for _ in range(3)]  # store pcb
+        self.process_list = []  # store process
+        self.__pname_dict = {}
         self.next_pid = 0
-        # To-Do: add a prior queue for pid reusing 
-
+        # To-Do: add a prior queue for pid reusing
         self.create_process(pname='init', prior=0, parent=None)
-
         self.running_process = 0
 
+        # init shell
+        self._cmd = {}
+        for cmd in command_list:
+            c = cmd(self)
+            self._cmd[c.cmd] = c
+        comp = Completer()
+        # register completer
+        for c in self._cmd.values():
+            comp.register(c)
+        readline.set_completer_delims(' \t\n;')
+        readline.parse_and_bind("tab: complete")
+        readline.set_completer(comp.complete)
+
     def create_process(self, pname, prior, parent):
+        if pname in self.__pname_dict:
+            return False
+        self.__pname_dict[pname] = self.next_pid
         pcb = PCB(self.next_pid, pname, prior, parent, self.ready_list[prior])
         self.ready_list[prior].append(pcb)
         self.process_list.append(Process(pcb))
         if parent != None:
             self.process_list[parent].add_child(self.next_pid)
-        
+
         self.scheduler(self.next_pid)
         self.next_pid += 1
+        return True
 
     def delete_process(self, pid):
         process = self.process_list[pid]
-
+        self.process_list[pid] = None
         for child in process.get_children():
             self.delete_process(child)
         # release all resources
         for rid, amount in process.get_resources():
             self.release(pid, rid, amount)
-        process.get_queue().remove(process.get_pcb()) # pcb.queue.remove(pcb)
-        del process
+        process.get_queue().remove(process.get_pcb())  # pcb.queue.remove(pcb)
 
+        del self.__pname_dict[process.pcb.name]
+        del process
         self.scheduler(None)
 
     def request(self, pid, rid, n=1):
         rcb = self.resources.get_rcb(rid)
         process = self.process_list[pid]
-        
+
         if rcb.status >= n:
             rcb.status -= n
             process.add_resource(rid, n)
         else:
             # To-Do: exception
             process.set_state('blocked')
-            process.get_queue().remove(process.get_pcb()) # pcb.queue.remove(pcb)
-            process.set_queue(rcb.waiting_list) # pcb.queue = rcb.waiting_list
-            rcb.join_waiting(pid, n) # rcb.waiting_list.append(pcb)
+            process.get_queue().remove(process.get_pcb())  # pcb.queue.remove(pcb)
+            process.set_queue(rcb.waiting_list)  # pcb.queue = rcb.waiting_list
+            rcb.join_waiting(pid, n)  # rcb.waiting_list.append(pcb)
 
             self.scheduler(pid)
 
@@ -72,18 +91,21 @@ class TestShell(object):
                 bprocess = self.process_list[bpid]
                 bprocess.set_state('ready')
                 bprocess.set_queue(self.ready_list[bprocess.get_prior()])
-                self.ready_list[bprocess.get_prior()].append(bprocess.get_pcb())
+                self.ready_list[bprocess.get_prior()].append(
+                    bprocess.get_pcb())
                 bprocess.add_resource(rid, bn)
         self.scheduler(bpid)
 
     def list_ready(self):
         for prior, pri_ready_list in enumerate(self.ready_list):
-            print("[Pri%d]: %s" % (prior, '-'.join([pcb.name for pcb in pri_ready_list])))
+            print("[Pri%d]: %s" %
+                  (prior, '-'.join([pcb.name for pcb in pri_ready_list])))
 
     def list_block(self):
         block_list = self.resources.get_block_list()
         for res_id, res_block_list in enumerate(block_list):
-            print("[Res%d]: %s" % (res_id, '-'.join([pcb.name for pcb in res_block_list])))
+            print("[Res%d]: %s" %
+                  (res_id, '-'.join([pcb.name for pcb in res_block_list])))
 
     def list_res(self):
         res_list = self.resources.get_res_list()
@@ -107,7 +129,7 @@ class TestShell(object):
             if len(prior) > 0:
                 p = prior[0]
                 break
-        
+
         # called from delete_process
         if pid == None:
             # preempt p
@@ -122,7 +144,18 @@ class TestShell(object):
             p.set_state('running')
             self.running_process = p.pid
             return
-        
+
+    def get_pname_dict(self):
+        return self.__pname_dict
 
     def run(self, logger):
         logger.info('test pass')
+        while True:
+            cmdline = input('shell>')
+            cmds = cmdline.split()
+            if not cmds:
+                continue
+            if cmds[0] in self._cmd:
+                self._cmd[cmds[0]].parse(cmds[1:])
+            else:
+                print('error: no such command')
