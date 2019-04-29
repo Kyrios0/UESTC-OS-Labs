@@ -6,8 +6,8 @@ class TestShell(object):
     def __init__(self):
         self.resources = Resources()
 
-        self.ready_list = [[] for _ in range(3)]
-        self.process_list = []
+        self.ready_list = [[] for _ in range(3)] # store pcb
+        self.process_list = [] # store process
         self.next_pid = 0
         # To-Do: add a prior queue for pid reusing 
 
@@ -21,9 +21,9 @@ class TestShell(object):
         self.process_list.append(Process(pcb))
         if parent != None:
             self.process_list[parent].add_child(self.next_pid)
+        
+        self.scheduler(self.next_pid)
         self.next_pid += 1
-
-        self.scheduler()
 
     def delete_process(self, pid):
         process = self.process_list[pid]
@@ -36,7 +36,7 @@ class TestShell(object):
         process.get_queue().remove(process.get_pcb()) # pcb.queue.remove(pcb)
         del process
 
-        self.scheduler()
+        self.scheduler(None)
 
     def request(self, pid, rid, n=1):
         rcb = self.resources.get_rcb(rid)
@@ -52,7 +52,7 @@ class TestShell(object):
             process.set_queue(rcb.waiting_list) # pcb.queue = rcb.waiting_list
             rcb.join_waiting(pid, n) # rcb.waiting_list.append(pcb)
 
-            self.scheduler()
+            self.scheduler(pid)
 
     def release(self, pid, rid, n=1):
         rcb = self.resources.get_rcb(rid)
@@ -62,6 +62,7 @@ class TestShell(object):
         process.sub_resource(rid, n)
         rcb.status += n
 
+        bpid = None
         if len(rcb.waiting_list) > 0:
             if rcb.waiting_list.values()[0] <= rcb.status:
                 # pop waiting_list[0]
@@ -73,9 +74,7 @@ class TestShell(object):
                 bprocess.set_queue(self.ready_list[bprocess.get_prior()])
                 self.ready_list[bprocess.get_prior()].append(bprocess.get_pcb())
                 bprocess.add_resource(rid, bn)
-        self.scheduler()
-
-
+        self.scheduler(bpid)
 
     def list_ready(self):
         for prior, pri_ready_list in enumerate(self.ready_list):
@@ -89,13 +88,41 @@ class TestShell(object):
     def list_res(self):
         res_list = self.resources.get_res_list()
         for res_id, res_status in enumerate(res_list):
-            print("[Res%d]: %s" % (res_id, res_status)))
+            print("[Res%d]: %s" % (res_id, res_status))
 
     def clock_interrupt(self):
-        pass
+        process = self.process_list[self.running_process]
+        pcb = process.get_pcb()
+        prior = process.get_prior()
 
-    def scheduler(self):
-        pass
+        process.set_state('ready')
+        self.ready_list[prior].pop(0)
+        self.ready_list[prior].append(pcb)
+
+        self.scheduler(self.running_process)
+
+    def scheduler(self, pid):
+        # get highest priority process
+        for prior in self.ready_list[::-1]:
+            if len(prior) > 0:
+                p = prior[0]
+                break
+        
+        # called from delete_process
+        if pid == None:
+            # preempt p
+            p.set_state('running')
+            self.running_process = p.pid
+            return
+
+        s = self.process_list[pid]
+
+        if s.get_state() != 'running' or s.get_prior() < p.get_prior():
+            # preempt p
+            p.set_state('running')
+            self.running_process = p.pid
+            return
+        
 
     def run(self, logger):
         logger.info('test pass')

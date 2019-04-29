@@ -25,15 +25,6 @@ class PCB(object):
         # To-Do: exception
         self.resources = dict(Counter(self.resources) - Counter({rid: n}))
 
-    def get_resources(self):
-        return self.resources.items()
-
-    def get_children(self)：
-        return self.children
-
-    def get_queue(self):
-        return self.queue
-
     def set_state(self, state):
         self.status = state
 
@@ -57,17 +48,20 @@ class Process(object):
         self.pcb.sub_resource(rid, n)
 
     def get_resources(self):
-        return self.pcb.get_resources()
+        return self.pcb.resources.items()
 
     def get_children(self):
-        return self.pcb.get_children()
+        return self.pcb.children
 
     def get_queue(self):
-        return self.pcb.get_queue()
+        return self.pcb.queue
 
     def get_prior(self):
-        return self.pcb.get_prior()
+        return self.pcb.priority
         
+    def get_state(self):
+        return self.pcb.status
+
     def get_pcb(self):
         return self.pcb
 
