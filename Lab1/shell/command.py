@@ -81,7 +81,7 @@ class CommandCr(Command):
         if priority != 1 and priority != 2:
             print('cr error: priority should be 1 or 2')
             return
-        if self.shell.create_process(name, priority, 0):
+        if self.shell.create_process(name, priority, 0): # bug
             print('* Process {} is running'.format(name))
         else:
             print('cr error: process {} exists'.format(name))
@@ -168,7 +168,7 @@ class CommandList(Command):
             print('list error: arg error')
 
 
-class CommandTo(Command):
+class CommandTo(Command): # todo
     def __init__(self, shell):
         super().__init__(shell, 'to', False)
 

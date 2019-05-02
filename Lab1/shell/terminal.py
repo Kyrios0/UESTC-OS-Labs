@@ -13,9 +13,9 @@ class TestShell(object):
         self.__pname_dict = {}
         self.next_pid = 0
         # To-Do: add a prior queue for pid reusing
-        self.create_process(pname='init', prior=0, parent=None)
         self.running_process = 0
-
+        self.create_process(pname='init', prior=0, parent=None)
+        
         # init shell
         self._cmd = {}
         for cmd in command_list:
@@ -39,11 +39,18 @@ class TestShell(object):
         if parent != None:
             self.process_list[parent].add_child(self.next_pid)
 
+        r = self.process_list[self.running_process]
+        r.set_state('ready')
         self.scheduler(self.next_pid)
         self.next_pid += 1
         return True
 
     def delete_process(self, pid):
+        # kill init = kill shell
+        if pid == 0:
+            print('exit.')
+            exit(0)
+        
         process = self.process_list[pid]
         self.process_list[pid] = None
         for child in process.get_children():
@@ -81,7 +88,7 @@ class TestShell(object):
         process.sub_resource(rid, n)
         rcb.status += n
 
-        bpid = None
+        bpid = -1
         if len(rcb.waiting_list) > 0:
             if rcb.waiting_list.values()[0] <= rcb.status:
                 # pop waiting_list[0]
@@ -95,22 +102,6 @@ class TestShell(object):
                     bprocess.get_pcb())
                 bprocess.add_resource(rid, bn)
         self.scheduler(bpid)
-
-    def list_ready(self):
-        for prior, pri_ready_list in enumerate(self.ready_list):
-            print("[Pri%d]: %s" %
-                  (prior, '-'.join([pcb.name for pcb in pri_ready_list])))
-
-    def list_block(self):
-        block_list = self.resources.get_block_list()
-        for res_id, res_block_list in enumerate(block_list):
-            print("[Res%d]: %s" %
-                  (res_id, '-'.join([pcb.name for pcb in res_block_list])))
-
-    def list_res(self):
-        res_list = self.resources.get_res_list()
-        for res_id, res_status in enumerate(res_list):
-            print("[Res%d]: %s" % (res_id, res_status))
 
     def clock_interrupt(self):
         process = self.process_list[self.running_process]
@@ -136,14 +127,33 @@ class TestShell(object):
             p.set_state('running')
             self.running_process = p.pid
             return
+        # called from release, no switch
+        elif pid == -1:
+            return 
 
         s = self.process_list[pid]
 
-        if s.get_state() != 'running' or s.get_prior() < p.get_prior():
+        if s.get_state() != 'running' or s.get_prior() < p.prior:
             # preempt p
             p.set_state('running')
             self.running_process = p.pid
             return
+
+    def list_ready(self):
+        for prior, pri_ready_list in enumerate(self.ready_list):
+            print("[Pri%d]: %s" %
+                  (prior, '-'.join([pcb.name for pcb in pri_ready_list])))
+
+    def list_block(self):
+        block_list = self.resources.get_block_list()
+        for res_id, res_block_list in enumerate(block_list):
+            print("[Res%d]: %s" %
+                  (res_id, '-'.join([pcb.name for pcb in res_block_list])))
+
+    def list_res(self):
+        res_list = self.resources.get_res_list()
+        for res_id, res_status in enumerate(res_list):
+            print("[Res%d]: %s" % (res_id, res_status))
 
     def get_pname_dict(self):
         return self.__pname_dict

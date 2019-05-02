@@ -19,8 +19,8 @@ class Resources(object):
     def __init__(self):
         self.rcbs = []
         # To-Do: support import config file
-        for i in range(1, 5):
-            self.rcbs.append(RCB(i, i))
+        for i in range(4):
+            self.rcbs.append(RCB(i, i+1))
     
     def get_rcb(self, rid):
         return self.rcbs[rid]
