@@ -135,12 +135,12 @@ class CommandPr(Command):
 
     def parse(self, cmds):
         if len(cmds) != 1:
-            print('pr error: only has 1 arg')
+            self.log.error('only has 1 arg')
             return
         pname = cmds[0]
         pname_list = self.shell.get_pname_dict()
         if pname not in pname_list:
-            print('pr error: no such process named {}'.format(pname))
+            self.log.error('no such process named {}'.format(pname))
             return
         pcb = self.shell.process_list[pname_list[pname]].pcb
         print('pid: {}'.format(pcb.pid))
@@ -169,12 +169,12 @@ class CommandList(Command):
 
     def parse(self, cmds):
         if len(cmds) != 1:
-            print('list error: only has 1 arg')
+            self.log.error('only has 1 arg')
             return
         if cmds[0] in self.__commands:
             self.__commands[cmds[0]]()
         else:
-            print('list error: arg error')
+            self.log.error('arg error')
 
 
 class CommandTo(Command):  # todo
@@ -183,7 +183,7 @@ class CommandTo(Command):  # todo
 
     def parse(self, cmds):
         if len(cmds) != 0:
-            print('to error: only has not arg')
+            self.log.error('only has not arg')
             return
         old_pname = self.get_running_process()
         self.shell.clock_interrupt()
@@ -199,7 +199,7 @@ class CommandReq(Command):
         if len(args) == 0:
             args = ['']
         resource_list = self.shell.resources.rcbs
-        resource_name_list = ['R{}'.format(c.rid) for c in resource_list]
+        resource_name_list = ['R{}'.format(c.rid + 1) for c in resource_list]
 
         if len(args) == 1:
             if args[0] in resource_name_list:
@@ -218,8 +218,8 @@ class CommandReq(Command):
         rname = cmds[0]
         rnum = cmds[1]
         try:
-            rid = int(rname[1:])
-            if rid < 1 or rid > 4:
+            rid = int(rname[1:]) - 1
+            if rid < 0 or rid >= len(self.shell.resources.rcbs):
                 raise ValueError()
         except ValueError:
             self.log.error('rid error')
@@ -245,7 +245,7 @@ class CommandRel(Command):
         if len(args) == 0:
             args = ['']
         resource_list = self.shell.resources.rcbs
-        resource_name_list = ['R{}'.format(c.rid) for c in resource_list]
+        resource_name_list = ['R{}'.format(c.rid + 1) for c in resource_list]
 
         if len(args) == 1:
             if args[0] in resource_name_list:
@@ -259,21 +259,21 @@ class CommandRel(Command):
 
     def parse(self, cmds):
         if len(cmds) != 2:
-            print('rel error: only has 2 arg')
+            self.log.error('only has 2 arg')
             return
         rname = cmds[0]
         rnum = cmds[1]
         try:
-            rid = int(rname[1:])
-            if rid < 1 or rid > 4:
+            rid = int(rname[1:]) - 1
+            if rid < 0 or rid >= len(self.shell.resources.rcbs):
                 raise ValueError()
         except ValueError:
-            print('rel error: rid error')
+            self.log.error('rid error')
             return
         try:
             rnum = int(rnum)
         except ValueError:
-            print('rel error: rnum error')
+            self.log.error('rnum error')
             return
         self.shell.release(self.shell.running_process, rid, rnum)
 
