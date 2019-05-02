@@ -90,7 +90,6 @@ class CommandCr(Command):
         if self.shell.create_process(name, priority, 0):
             self.log.info(
                 '* Process {} is running'.format(self.get_running_process()))
-
         else:
             self.log.error('process {} exists'.format(name))
 
@@ -231,7 +230,7 @@ class CommandReq(Command):
         old_pname = self.get_running_process()
         if self.shell.request(self.shell.running_process, rid, rnum):
             self.log.info('process {} requests {} R{}'.format(
-                old_pname, rnum, rid))
+                old_pname, rnum, rid + 1))
         else:
             self.log.info('process {} is running. process {} is blocked.'.format(
                 self.get_running_process(), old_pname))

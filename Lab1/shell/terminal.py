@@ -28,6 +28,7 @@ class TestShell(object):
         readline.set_completer_delims(' \t\n;')
         readline.parse_and_bind("tab: complete")
         readline.set_completer(comp.complete)
+        self.log = logging.getLogger("os_lab1")
 
     def create_process(self, pname, prior, parent):
         if pname in self.__pname_dict:
@@ -52,7 +53,6 @@ class TestShell(object):
             exit(0)
         
         process = self.process_list[pid]
-        self.process_list[pid] = None
         for child in process.get_children():
             self.delete_process(child)
         # release all resources
@@ -62,6 +62,7 @@ class TestShell(object):
 
         del self.__pname_dict[process.pcb.name]
         del process
+        self.process_list[pid] = None
         self.scheduler(None)
 
     def request(self, pid, rid, n=1):
@@ -91,7 +92,7 @@ class TestShell(object):
 
         bpid = -1
         if len(rcb.waiting_list) > 0:
-            if rcb.waiting_list.values()[0] <= rcb.status:
+            if list(rcb.waiting_list.values())[0] <= rcb.status:
                 # pop waiting_list[0]
                 bpid, bn = list(rcb.waiting_list.items())[0]
                 del rcb.waiting_list[bpid]
@@ -101,6 +102,9 @@ class TestShell(object):
                 bprocess.set_queue(self.ready_list[bprocess.get_prior()])
                 self.ready_list[bprocess.get_prior()].append(bprocess.get_pcb())
                 bprocess.add_resource(rid, bn)
+        self.log.debug('relese R{}.'.format(rid+1))
+        if bpid != -1:
+            self.log.debug('wake up process {}.'.format(self.get_process_name(bpid)))
         self.scheduler(bpid)
 
     def clock_interrupt(self):
