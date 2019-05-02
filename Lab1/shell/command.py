@@ -1,4 +1,7 @@
 import readline
+import logging
+
+
 class Completer(object):
     def __init__(self):
         self.__commands = []
@@ -49,12 +52,16 @@ class Command(object):
         self.cmd = cmd
         self.has_arg = has_arg
         self.shell = shell
+        self.log = logging.getLogger("os_lab1")
 
     def complete(self, args, end):
         return []
 
     def parse(self, cmds):
         pass
+
+    def get_running_process(self):
+        return self.shell.get_process_name(self.shell.running_process)
 
 
 class CommandCr(Command):
@@ -71,7 +78,7 @@ class CommandCr(Command):
 
     def parse(self, cmds):
         if len(cmds) != 2:
-            print('cr error: only has 2 arg')
+            self.log.error('only has 2 arg')
             return
         name = cmds[0]
         try:
@@ -79,12 +86,14 @@ class CommandCr(Command):
         except ValueError:
             priority = None
         if priority != 1 and priority != 2:
-            print('cr error: priority should be 1 or 2')
+            self.log.error('priority should be 1 or 2')
             return
-        if self.shell.create_process(name, priority, 0): # bug
-            print('* Process {} is running'.format(name))
+        if self.shell.create_process(name, priority, 0):
+            self.log.info(
+                '* Process {} is running'.format(self.get_running_process()))
+
         else:
-            print('cr error: process {} exists'.format(name))
+            self.log.error('process {} exists'.format(name))
 
 
 class CommandDe(Command):
@@ -101,15 +110,16 @@ class CommandDe(Command):
 
     def parse(self, cmds):
         if len(cmds) != 1:
-            print('de error: only has 1 arg')
+            self.log.error('only has 1 arg')
             return
         pname = cmds[0]
         pname_list = self.shell.get_pname_dict()
         if pname not in pname_list:
-            print('de error: no such process named {}'.format(pname))
+            self.log.error('no such process named {}'.format(pname))
             return
         self.shell.delete_process(pname_list[pname])
-        print('* Process {} has been delete'.format(pname))
+        self.log.info('* Process {} has been delete'.format(pname))
+
 
 class CommandPr(Command):
     def __init__(self, shell):
@@ -142,12 +152,11 @@ class CommandPr(Command):
         print('queue: {}'.format(pcb.queue))
 
 
-
 class CommandList(Command):
     def __init__(self, shell):
         super().__init__(shell, 'list', True)
         self.__commands = {'ready': self.shell.list_ready,
-                          'block': self.shell.list_block, 'res': self.shell.list_res}
+                           'block': self.shell.list_block, 'res': self.shell.list_res}
 
     def complete(self, args, end):
         if len(args) > 1:
@@ -168,7 +177,7 @@ class CommandList(Command):
             print('list error: arg error')
 
 
-class CommandTo(Command): # todo
+class CommandTo(Command):  # todo
     def __init__(self, shell):
         super().__init__(shell, 'to', False)
 
@@ -176,7 +185,10 @@ class CommandTo(Command): # todo
         if len(cmds) != 0:
             print('to error: only has not arg')
             return
+        old_pname = self.get_running_process()
         self.shell.clock_interrupt()
+        self.log.info(
+            '* Process {} is running. Process {} is ready.'.format(self.get_running_process(), old_pname))
 
 
 class CommandReq(Command):
@@ -201,7 +213,7 @@ class CommandReq(Command):
 
     def parse(self, cmds):
         if len(cmds) != 2:
-            print('req error: only has 2 arg')
+            self.log.error('only has 2 arg')
             return
         rname = cmds[0]
         rnum = cmds[1]
@@ -210,15 +222,21 @@ class CommandReq(Command):
             if rid < 1 or rid > 4:
                 raise ValueError()
         except ValueError:
-            print('req error: rid error')
+            self.log.error('rid error')
             return
         try:
             rnum = int(rnum)
         except ValueError:
-            print('req error: rnum error')
+            self.log.error('rnum error')
             return
-        self.shell.request(self.shell.running_process, rid, rnum)
-        
+        old_pname = self.get_running_process()
+        if self.shell.request(self.shell.running_process, rid, rnum):
+            self.log.info('process {} requests {} R{}'.format(
+                old_pname, rnum, rid))
+        else:
+            self.log.info('process {} is running. process {} is blocked.'.format(
+                self.get_running_process(), old_pname))
+
 class CommandRel(Command):
     def __init__(self, shell):
         super().__init__(shell, 'rel', True)
@@ -259,4 +277,6 @@ class CommandRel(Command):
             return
         self.shell.release(self.shell.running_process, rid, rnum)
 
-command_list = [CommandPr, CommandList, CommandCr, CommandDe, CommandTo, CommandReq, CommandRel]
+
+command_list = [CommandPr, CommandList, CommandCr,
+                CommandDe, CommandTo, CommandReq, CommandRel]

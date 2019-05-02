@@ -71,14 +71,15 @@ class TestShell(object):
         if rcb.status >= n:
             rcb.status -= n
             process.add_resource(rid, n)
+            return True
         else:
             # To-Do: exception
             process.set_state('blocked')
             process.get_queue().remove(process.get_pcb())  # pcb.queue.remove(pcb)
             process.set_queue(rcb.waiting_list)  # pcb.queue = rcb.waiting_list
             rcb.join_waiting(pid, n)  # rcb.waiting_list.append(pcb)
-
             self.scheduler(pid)
+            return False
 
     def release(self, pid, rid, n=1):
         rcb = self.resources.get_rcb(rid)
@@ -169,3 +170,5 @@ class TestShell(object):
                 self._cmd[cmds[0]].parse(cmds[1:])
             else:
                 print('error: no such command')
+    def get_process_name(self, pid):
+        return self.process_list[pid].pcb.name
