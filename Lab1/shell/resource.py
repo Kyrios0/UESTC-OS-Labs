@@ -10,7 +10,7 @@ class RCB(object):
     def __init__(self, rid, s):
         self.rid = rid
         self.status = s
-        self.waiting_list = {} # {pcb: n}
+        self.waiting_list = {} # {pid: n}
 
     def join_waiting(self, pid, n):
         self.waiting_list = dict_plus(self.waiting_list, {pid: n})

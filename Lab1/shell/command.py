@@ -1,7 +1,6 @@
 import readline
 import logging
 
-
 class Completer(object):
     def __init__(self):
         self.__commands = []

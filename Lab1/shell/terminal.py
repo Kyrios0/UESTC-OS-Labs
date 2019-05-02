@@ -99,8 +99,7 @@ class TestShell(object):
                 bprocess = self.process_list[bpid]
                 bprocess.set_state('ready')
                 bprocess.set_queue(self.ready_list[bprocess.get_prior()])
-                self.ready_list[bprocess.get_prior()].append(
-                    bprocess.get_pcb())
+                self.ready_list[bprocess.get_prior()].append(bprocess.get_pcb())
                 bprocess.add_resource(rid, bn)
         self.scheduler(bpid)
 
@@ -149,7 +148,7 @@ class TestShell(object):
         block_list = self.resources.get_block_list()
         for res_id, res_block_list in enumerate(block_list):
             print("[Res%d]: %s" %
-                  (res_id, '-'.join([pcb.name for pcb in res_block_list])))
+                  (res_id, '-'.join([self.process_list[pid].get_pcb().name for pid in res_block_list])))
 
     def list_res(self):
         res_list = self.resources.get_res_list()
@@ -160,7 +159,7 @@ class TestShell(object):
         return self.__pname_dict
 
     def run(self, logger):
-        logger.info('test pass')
+        logger.info('Init process is running.')
         while True:
             cmdline = input('shell>')
             cmds = cmdline.split()
