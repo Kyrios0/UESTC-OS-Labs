@@ -6,17 +6,11 @@ Repo for UESTC OS Labs course.
 
 ## Status
 
-| Exercise | 01 |
-| - | - |
-| Status | working |
+| Exercise | 01 | 02 |
+| - | - | - |
+| Status | Done | Done |
 
 ## Depends
 
 pyreadline
-
-## Bugs
-
-1. delete process; list ready list block
-2. request rid error
-3. release rnum check??
 
